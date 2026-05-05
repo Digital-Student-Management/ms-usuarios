@@ -6,14 +6,11 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-/**
- * Subtipo de {@link Usuario}. En el modelo lógico solo aporta el subtipo "funcionario";
- * el {@code id} heredado actúa como identificador (equivalente a {@code id_funcionario} en el ER).
- */
+// Funcionario no tiene campos propios → solo necesita @NoArgsConstructor.
+// @AllArgsConstructor se omite porque generaría un constructor idéntico al vacío (conflicto de compilación).
 @Entity
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor
-@AllArgsConstructor
 public class Funcionario extends Usuario {
 }
