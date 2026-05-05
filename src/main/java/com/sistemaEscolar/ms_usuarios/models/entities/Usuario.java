@@ -1,6 +1,5 @@
 package com.sistemaEscolar.ms_usuarios.models.entities;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -14,7 +13,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/** Persona/cuenta base del sistema; herencia JOINED con subtipo por rol. Contraseña: solo llega por JSON en alta/edición. */
+// Entidad base del sistema: representa a cualquier persona con acceso al sistema.
+// Usa herencia JOINED: cada subtipo (Docente, Estudiante, etc.) tiene su propia tabla en BD.
+// Las anotaciones de Jackson (@JsonTypeInfo) fueron movidas a los DTOs → esta entidad queda limpia.
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
 @Data
@@ -43,8 +44,9 @@ public class Usuario {
     @NotBlank
     private String correoUsuario;
 
+    // La contraseña se almacena en BD pero NUNCA se devuelve al exterior.
+    // Esto se garantiza ahora por diseño en UsuarioResponseDTO (que no tiene este campo).
     @NotBlank
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String contrasenaUsuario;
 
     @NotBlank
