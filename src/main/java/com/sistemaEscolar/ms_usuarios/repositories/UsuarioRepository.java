@@ -20,4 +20,7 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 
     /** Igual por correo único frente al negocio. */
     boolean existsByCorreoUsuario(String correoUsuario);
+
+    /** Buscar por correo para el inicio de sesión */
+    Optional<Usuario> findByCorreoUsuario(String correoUsuario);
 }
