@@ -115,8 +115,7 @@ public class UsuarioMapper {
             dto = inspector;
 
         } else {
-            // Funcionario y usuarios base/genéricos (p.ej. ADMIN) → DTO de funcionario.
-            // Antes lanzaba excepción y rompía TODO el listado de usuarios; ahora se mapea sin fallar.
+            // Funcionario y usuarios base genéricos (p.ej. ADMIN)
             dto = new FuncionarioResponseDTO();
         }
 

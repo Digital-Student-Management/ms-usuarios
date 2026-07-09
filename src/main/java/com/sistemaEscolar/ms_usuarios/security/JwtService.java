@@ -12,10 +12,7 @@ import java.util.Date;
 import java.util.Map;
 
 /**
- * JwtService — Generación y validación de tokens JWT firmados (HS256).
- *
- * Reemplaza el "token" simulado anterior (un string predecible sin firma).
- * El secreto y la expiración se leen de application.properties.
+ * Generación y validación de tokens JWT firmados.
  */
 @Component
 public class JwtService {
@@ -30,7 +27,6 @@ public class JwtService {
         this.expirationMs = expirationMs;
     }
 
-    /** Genera un JWT firmado con los datos del usuario (id, rut y rol). */
     public String generarToken(Long idUsuario, String rut, String rol) {
         Date ahora = new Date();
         Date exp = new Date(ahora.getTime() + expirationMs);
@@ -43,7 +39,6 @@ public class JwtService {
                 .compact();
     }
 
-    /** Valida la firma y la expiración; devuelve los claims o lanza excepción si es inválido. */
     public Claims validarToken(String token) {
         return Jwts.parser()
                 .verifyWith(key)
@@ -52,7 +47,6 @@ public class JwtService {
                 .getPayload();
     }
 
-    /** Extrae el rol del token (o null si es inválido). */
     public String obtenerRol(String token) {
         try {
             return validarToken(token).get("rol", String.class);
@@ -61,7 +55,6 @@ public class JwtService {
         }
     }
 
-    /** true si el token tiene firma válida y no está expirado. */
     public boolean esValido(String token) {
         try {
             validarToken(token);

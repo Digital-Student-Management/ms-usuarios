@@ -13,17 +13,9 @@ import java.io.IOException;
 import java.util.Set;
 
 /**
- * JwtAuthFilter — Protege las operaciones sensibles de usuarios.
- *
- * Estrategia deliberada para NO romper el sistema:
- *   - Solo exige token en operaciones de ESCRITURA sobre /api/usuarios
- *     (POST, PUT, DELETE), que son las acciones dañinas.
- *   - Los GET quedan libres, porque varios microservicios consultan
- *     GET /api/usuarios/{id} de servidor a servidor SIN token.
- *   - Login y registro (/api/auth/**) quedan siempre públicos.
- *
- * En una segunda fase de endurecimiento debería añadirse autenticación
- * de servicio-a-servicio (API key interna) para proteger también los GET.
+ * Exige un JWT válido con rol ADMIN o DIRECTIVO para las operaciones de
+ * escritura sobre /api/usuarios. Los GET quedan libres para permitir las
+ * consultas internas entre microservicios.
  */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -53,7 +45,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        // A partir de aquí se exige un JWT válido con rol autorizado.
         String header = request.getHeader("Authorization");
         if (header == null || !header.startsWith("Bearer ")) {
             responder(response, HttpServletResponse.SC_UNAUTHORIZED, "Token de autenticación requerido");

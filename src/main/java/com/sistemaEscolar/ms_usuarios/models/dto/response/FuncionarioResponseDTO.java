@@ -4,8 +4,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 
-// DTO de respuesta para Funcionario (y para usuarios genéricos como ADMIN).
-// No agrega campos propios; solo hereda los datos base del usuario.
+// DTO de respuesta para Funcionario y usuarios genéricos (ej. ADMIN).
 @Data
 @EqualsAndHashCode(callSuper = true)
 @NoArgsConstructor

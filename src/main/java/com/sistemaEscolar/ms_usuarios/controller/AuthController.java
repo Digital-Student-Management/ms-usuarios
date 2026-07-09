@@ -28,7 +28,6 @@ public class AuthController {
     private final RolRepository rolRepository;
     private final JwtService jwtService;
 
-    // Codificador BCrypt para hashear/verificar contraseñas (campo inicializado → no entra al constructor de Lombok).
     private final PasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @PostMapping("/login")
@@ -46,10 +45,8 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no registrado");
         }
 
-        // Verificación de contraseña:
-        //   - Si ya está hasheada (BCrypt empieza con "$2"), se compara con encoder.matches().
-        //   - Si es una contraseña antigua en texto plano, se compara directo y, si coincide,
-        //     se re-guarda hasheada (migración perezosa) para dejar de almacenarla en claro.
+        // Verifica con BCrypt. Si la contraseña está en texto plano (datos antiguos),
+        // se compara directo y se re-guarda hasheada tras un login exitoso.
         String almacenada = usuario.getContrasenaUsuario();
         boolean coincide;
         if (almacenada != null && almacenada.startsWith("$2")) {
@@ -89,12 +86,32 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@RequestBody RegisterRequest request,
+                                      @RequestHeader(value = "Authorization", required = false) String authHeader) {
         if (usuarioRepository.existsByRutUsuario(request.getRut())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El RUT ya está registrado");
         }
         if (usuarioRepository.existsByCorreoUsuario(request.getEmail())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "El correo ya está registrado");
+        }
+
+        // El auto-registro público solo permite ESTUDIANTE/APODERADO. Crear personal requiere
+        // un token de ADMIN/DIRECTIVO, salvo que el sistema esté vacío (primer administrador).
+        String rolSolicitado = request.getRol() == null ? "" : request.getRol().trim().toUpperCase();
+        boolean esRolPrivilegiado = !rolSolicitado.equals("ESTUDIANTE") && !rolSolicitado.equals("APODERADO");
+        boolean sistemaVacio = usuarioRepository.count() == 0;
+
+        if (esRolPrivilegiado && !sistemaVacio) {
+            String rolSolicitante = null;
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                rolSolicitante = jwtService.obtenerRol(authHeader.substring(7));
+            }
+            boolean autorizado = "ADMIN".equalsIgnoreCase(rolSolicitante)
+                    || "DIRECTIVO".equalsIgnoreCase(rolSolicitante);
+            if (!autorizado) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "El auto-registro solo permite Estudiante o Apoderado. Las cuentas de personal las crea un administrador.");
+            }
         }
 
         // Buscar o crear rol
@@ -150,8 +167,7 @@ public class AuthController {
             dir.setCargoDirectivo("Directivo");
             usuario = dir;
         } else {
-            // ADMIN, FUNCIONARIO u otros → entidad Funcionario (subtipo válido,
-            // NO Usuario base, que rompía el mapeo del listado de usuarios).
+            // ADMIN, FUNCIONARIO u otros roles genéricos se mapean a Funcionario.
             usuario = new Funcionario();
         }
 
@@ -161,7 +177,7 @@ public class AuthController {
         usuario.setAppaternoUsuario(appaterno);
         usuario.setApmaternoUsuario(apmaterno);
         usuario.setCorreoUsuario(request.getEmail());
-        usuario.setContrasenaUsuario(encoder.encode(request.getPassword())); // hash BCrypt
+        usuario.setContrasenaUsuario(encoder.encode(request.getPassword()));
         usuario.setEstadoUsuario("ACTIVO");
         usuario.setIdRol(rol.getId());
 
