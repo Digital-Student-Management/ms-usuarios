@@ -115,7 +115,9 @@ public class UsuarioMapper {
             dto = inspector;
 
         } else {
-            throw new IllegalArgumentException("Tipo de entidad desconocido: " + entidad.getClass().getSimpleName());
+            // Funcionario y usuarios base/genéricos (p.ej. ADMIN) → DTO de funcionario.
+            // Antes lanzaba excepción y rompía TODO el listado de usuarios; ahora se mapea sin fallar.
+            dto = new FuncionarioResponseDTO();
         }
 
         // Copiamos los campos comunes (base) al DTO resultante

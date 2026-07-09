@@ -5,10 +5,13 @@ import com.sistemaEscolar.ms_usuarios.models.dto.response.UsuarioResponseDTO;
 import com.sistemaEscolar.ms_usuarios.models.mappers.UsuarioMapper;
 import com.sistemaEscolar.ms_usuarios.repositories.UsuarioRepository;
 import com.sistemaEscolar.ms_usuarios.repositories.RolRepository;
+import com.sistemaEscolar.ms_usuarios.security.JwtService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -23,6 +26,10 @@ public class AuthController {
 
     private final UsuarioRepository usuarioRepository;
     private final RolRepository rolRepository;
+    private final JwtService jwtService;
+
+    // Codificador BCrypt para hashear/verificar contraseñas (campo inicializado → no entra al constructor de Lombok).
+    private final PasswordEncoder encoder = new BCryptPasswordEncoder();
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
@@ -39,7 +46,23 @@ public class AuthController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no registrado");
         }
 
-        if (!usuario.getContrasenaUsuario().equals(request.getPassword())) {
+        // Verificación de contraseña:
+        //   - Si ya está hasheada (BCrypt empieza con "$2"), se compara con encoder.matches().
+        //   - Si es una contraseña antigua en texto plano, se compara directo y, si coincide,
+        //     se re-guarda hasheada (migración perezosa) para dejar de almacenarla en claro.
+        String almacenada = usuario.getContrasenaUsuario();
+        boolean coincide;
+        if (almacenada != null && almacenada.startsWith("$2")) {
+            coincide = encoder.matches(request.getPassword(), almacenada);
+        } else {
+            coincide = almacenada != null && almacenada.equals(request.getPassword());
+            if (coincide) {
+                usuario.setContrasenaUsuario(encoder.encode(request.getPassword()));
+                usuarioRepository.save(usuario);
+            }
+        }
+
+        if (!coincide) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Contraseña incorrecta");
         }
 
@@ -51,8 +74,8 @@ public class AuthController {
         }
 
         Map<String, Object> response = new HashMap<>();
-        response.put("token", "mock-jwt-token-from-backend-" + usuario.getId());
-        
+        response.put("token", jwtService.generarToken(usuario.getId(), usuario.getRutUsuario(), roleName));
+
         Map<String, Object> userMap = new HashMap<>();
         userMap.put("id", usuario.getId());
         userMap.put("rut", usuario.getRutUsuario());
@@ -127,7 +150,9 @@ public class AuthController {
             dir.setCargoDirectivo("Directivo");
             usuario = dir;
         } else {
-            usuario = new Usuario();
+            // ADMIN, FUNCIONARIO u otros → entidad Funcionario (subtipo válido,
+            // NO Usuario base, que rompía el mapeo del listado de usuarios).
+            usuario = new Funcionario();
         }
 
         usuario.setRutUsuario(request.getRut());
@@ -136,15 +161,15 @@ public class AuthController {
         usuario.setAppaternoUsuario(appaterno);
         usuario.setApmaternoUsuario(apmaterno);
         usuario.setCorreoUsuario(request.getEmail());
-        usuario.setContrasenaUsuario(request.getPassword());
+        usuario.setContrasenaUsuario(encoder.encode(request.getPassword())); // hash BCrypt
         usuario.setEstadoUsuario("ACTIVO");
         usuario.setIdRol(rol.getId());
 
         Usuario guardado = usuarioRepository.save(usuario);
-        
+
         Map<String, Object> response = new HashMap<>();
-        response.put("token", "mock-jwt-token-from-backend-" + guardado.getId());
-        
+        response.put("token", jwtService.generarToken(guardado.getId(), guardado.getRutUsuario(), roleStr));
+
         Map<String, Object> userMap = new HashMap<>();
         userMap.put("id", guardado.getId());
         userMap.put("rut", guardado.getRutUsuario());

@@ -20,7 +20,8 @@ import lombok.NoArgsConstructor;
     @JsonSubTypes.Type(value = ApoderadoResponseDTO.class,   name = "APODERADO"),
     @JsonSubTypes.Type(value = DocenteResponseDTO.class,     name = "DOCENTE"),
     @JsonSubTypes.Type(value = DirectivoResponseDTO.class,   name = "DIRECTIVO"),
-    @JsonSubTypes.Type(value = InspectorResponseDTO.class,   name = "INSPECTOR")
+    @JsonSubTypes.Type(value = InspectorResponseDTO.class,   name = "INSPECTOR"),
+    @JsonSubTypes.Type(value = FuncionarioResponseDTO.class, name = "FUNCIONARIO")
 })
 @Data
 @NoArgsConstructor
